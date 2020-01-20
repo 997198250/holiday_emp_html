@@ -25,9 +25,266 @@
     <link href="/js/DataTables/css/jquery.dataTables.min.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="/js/DataTables/js/jquery.dataTables.min.js"></script>
     <script type="text/javascript">
+        $(function () {
+            queryProvinceCode();
+            queryTempDept();
+            initTempDataTables();
+        })
+
+        var tempDataTable;
+        function initTempDataTables() {
+            tempDataTable= $("#tempTable").DataTable({
+                //ajax
+                //开启服务的分页
+                //设置每页条数
+                //设置不排序  不搜索
+                // 设置显示的数据
+                //国际化
+                serverSide: true,//开启服务端分页
+                ajax: {
+                    url:'http://localhost:8080/temp/queryTempList',
+                    type: 'POST',
+                    dataSrc:function (result) {
+                        result.recordsTotal=result.obj.recordsTotal,
+                        result.recordsFiltered=result.obj.recordsFiltered,
+                        result.draw=result.obj.draw
+                        return result.obj.data;
+                    }
+                },
+                language: {//国际化
+                    "sProcessing": "处理中...",
+                    "sLengthMenu": "每页 _MENU_ 条数据",
+                    "sZeroRecords": "没有匹配结果",
+                    "sInfo": "显示第 _START_ 至 _END_ 项结果，共 _TOTAL_ 项",
+                    "sInfoEmpty": "显示第 0 至 0 项结果，共 0 项",
+                    "sInfoFiltered": "(由 _MAX_ 项结果过滤)",
+                    "sInfoPostFix": "",
+                    "sSearch": "搜索:",
+                    "sUrl": "",
+                    "sEmptyTable": "表中数据为空",
+                    "sLoadingRecords": "载入中...",
+                    "sInfoThousands": ",",
+                    "oPaginate": {
+                        "sFirst": "首页",
+                        "sPrevious": "上页",
+                        "sNext": "下页",
+                        "sLast": "末页"
+                    },
+                    "oAria": {
+                        "sSortAscending": ": 以升序排列此列",
+                        "sSortDescending": ": 以降序排列此列"
+                    }
+                },
+                processing:true,//开启请求进度
+                ordering:false,//是否启用排序
+                searching: false,//是否启用搜索
+                lengthMenu:[2,5,8],
+                //数据如何展示到表格中
+                "columns":[
+                    {
+                        "data": "id", "title": "选择", render: function (data, type, row, meta) {
+                            return '<input type="checkbox" name="id" value="'+data+'">';
+                        }
+                    },
+                    {"data":"name","title":"员工名称"},
+                    {"data":"salary","title":"员工工资"},
+                    {"data":"jobname","title":"岗位"},
+                    {"data":"lingname","title":"领导"},
+                    {"data":"deptname","title":"部门"},
+                    {"data":"entrytime","title":"入职时间",render:function (data, type, row, meta) {
+                            if(data == undefined || data == ""){
+                                return "";
+                            }
+                            var date = new Date(data);
+                            return timestampToTime(date);
+                        }},
+                    {data:"id","title":"操作",render:function (data, type, row, meta) {
+                            return '<button type="button" class="btn btn-primary" onclick="updatebook('+data+')"><span class="glyphicon glyphicon-pencil">修改</span></button>'
+                        }}
+                ],
+            });
+        }
+        //时间转换
+        function timestampToTime(date) {
+            Y = date.getFullYear() + '-';
+            M = (date.getMonth()+1 < 10 ? '0'+(date.getMonth()+1) : date.getMonth()+1) + '-';
+            D = date.getDate() + ' ';
+            return Y+M+D;
+        }
+
+        var addTempBox;
+        function addTemp() {
+            var html=$("#addTempBoox").html();
+            addTempBox=bootbox.dialog({
+                title:"添加员工",
+                message:html,
+            })
+        }
+        function yanzheng() {
+            var name=$("#name",addTempBox).val();
+            var dape=$("#dept",addTempBox).val();
+            if(name==""){
+                alert("请填写员工姓名")
+                return false;
+            }else {
+                $.post({
+                    url:"http://localhost:8080/temp/queryTempByName",
+                    data:{"name":name,"dape":dape},
+                    dataType:"json",
+                    success:function (result) {
+
+                        if(result.code==200){
+                            alert(JSON.stringify(result.message))
+                            $("#wufu",addTempBox).hide();
+                            $("#tijiao",addTempBox).removeAttr("disabled");
+                        }else {
+                            alert(JSON.stringify(result.message))
+                        }
+
+                    }
+                })
+            }
+
+        }
+        function queryProvinceCode() {
+            $.post({
+                url:"http://localhost:8080/temp/queryTempJob",
+                dataType:"json",
+                success:function (data) {
+                    var selectProvinceCode='<option value="">==请选择==</option>'
+                    for (var j=0;j<data.length;j++){
+                        selectProvinceCode+="<option value='"+data[j].id+"'>"+data[j].jobname+"</option>"
+                    }
+                    $("#province",addTempBox).html(selectProvinceCode);
+                }
+            })
+        }
+        var pageCode;
+        function queryTempDept() {
+            $.post({
+                url:"http://localhost:8080/temp/queryTempDept",
+                dataType:"json",
+                success:function (data) {
+                    pageCode=data;
+                    var selectProvinceCode='<option value="">==请选择==</option>'
+                    for (var j=0;j<data.length;j++){
+                        selectProvinceCode+="<option value='"+data[j].id+"'>"+data[j].deptname+"</option>"
+                    }
+                    $("#dept",addTempBox).html(selectProvinceCode);
+
+                }
+            })
+        }
+        function linkage() {
+            var dape=$("#dept",addTempBox).val();
+            var selectProvinceCode=''
+            for (var i = 0; i <pageCode.length ; i++) {
+                if(dape==pageCode[i].deptid){
+                    selectProvinceCode+="<option value='"+pageCode[i].id+"'>"+pageCode[i].lingname+"</option>"
+                }
+            }
+            $("#lingdao",addTempBox).html(selectProvinceCode);
+            yanzheng();
+        }
+        function addTempList() {
+            var salary=$("#salary",addTempBox).val();
+            var entry_time=$("#entry_time",addTempBox).val();
+            var province=$("#province",addTempBox).val();
+            if(salary==""){
+                alert("请填写工资")
+                return false;
+            }
+            if(entry_time==""){
+                alert("请填写入职时间")
+                return false;
+            }
+            if(province==""){
+                alert("请填写岗位")
+                return false;
+            }
+            $.post({
+                url:"http://localhost:8080/temp/addTempList",
+                dataType:"json",
+                data:$("#addTempList",addTempBox).serialize(),
+                success:function (rs) {
+                    alert("增加成功")
+                    window.location.reload();
+                }
+            })
+        }
     </script>
 </head>
 <body>
-
+<div class="panel panel-info">
+    <div class="panel-heading">
+        <h3 class="panel-title">学生信息
+            <button type="button" onclick="addTemp()" class="btn btn-primary"><span class="glyphicon glyphicon-plus">增加</span></button>
+            <button type="button" onclick="daochuUser()" class="btn btn-primary"><span class="glyphicon glyphicon-plus">导出Excli</span></button>
+        </h3>
+    </div>
+    <div class="panel-body table-responsive">
+        <table id="tempTable" class="table table-bordered table-striped text-nowrap"></table>
+    </div>
+</div>
+<div id="addTempBoox" style="display: none">
+    <form class="form-horizontal" id="addTempList">
+        <div class="form-group">
+            <label class="col-sm-2 control-label">员工姓名</label>
+            <div class="col-sm-10">
+                <input type="text" name="name" id="name"  class="form-control" maxlength="50"  placeholder="请输入真实姓名">
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">员工工资</label>
+            <div class="col-sm-10">
+                <input type="text" name="salary" id="salary"  class="form-control" maxlength="50"  placeholder="请输入真实工资">
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">入职时间</label>
+            <div class="col-sm-10">
+                <input type="date" name="entrytime" id="entry_time" class="form-control" maxlength="50"  placeholder="请输入真实工资">
+            </div>
+        </div>
+        <div class="form-group">
+            <label  class="col-sm-2 control-label">岗位</label>
+            <div class="row">
+                <div class="col-lg-3">
+                    <select name="jobid" id="province" class="form-control" >
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label  class="col-sm-2 control-label">部门</label>
+            <div class="row">
+                <div class="col-lg-3">
+                    <select name="deptid" id="dept" onchange="linkage()" class="form-control" >
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label  class="col-sm-2 control-label">领导</label>
+            <div class="row">
+                <div class="col-lg-3">
+                    <select name="leaderid" id="lingdao" class="form-control" >
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label  class="col-sm-2 control-label"></label>
+            <div class="col-sm-10">
+                <input type="button" value="提交" id="tijiao" onclick="addTempList()" disabled="disabled" class="btn btn-success">
+            </div>
+            <div id="wufu">
+                <div class="col-sm-10">
+                    <font color="red">请填写完员工姓名以及部门领导才能提交</font>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
 </body>
 </html>
