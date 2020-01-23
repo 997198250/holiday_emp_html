@@ -99,7 +99,7 @@
                             return timestampToTime(date);
                         }},
                     {data:"id","title":"操作",render:function (data, type, row, meta) {
-                            return '<button type="button" class="btn btn-primary" onclick="updatebook('+data+')"><span class="glyphicon glyphicon-pencil">修改</span></button>'
+                            return '<button type="button" class="btn btn-primary" onclick="delEmp('+data+')"><span class="glyphicon glyphicon-pencil">删除</span></button>'
                         }}
                 ],
             });
@@ -212,6 +212,26 @@
                 }
             })
         }
+        function delEmp(id) {
+            $.post({
+                url:'http://localhost:8080/temp/deleteEmp',
+                data:{"id":id},
+                dataType:'json',
+                success:function (rs) {
+                if(rs.code==200){
+                   tempDataTable.ajax.reload();
+                }
+                if(rs.code==500){
+                   alert("删除失败"+rs.info);
+                }
+                },error:function () {
+
+                }
+            })
+        }
+        function exportExecl() {
+        location.href='http://localhost:8080/temp/exportExecl';
+        }
     </script>
 </head>
 <body>
@@ -219,7 +239,7 @@
     <div class="panel-heading">
         <h3 class="panel-title">学生信息
             <button type="button" onclick="addTemp()" class="btn btn-primary"><span class="glyphicon glyphicon-plus">增加</span></button>
-            <button type="button" onclick="daochuUser()" class="btn btn-primary"><span class="glyphicon glyphicon-plus">导出Excli</span></button>
+            <button type="button" onclick="exportExecl()" class="btn btn-primary"><span class="glyphicon glyphicon-plus">导出Excli</span></button>
         </h3>
     </div>
     <div class="panel-body table-responsive">
